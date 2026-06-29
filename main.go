@@ -82,4 +82,19 @@ func RegisterUser() {
 	fmt.Printf("\nUser Created Successfuly: %s | %s | %s", id, email, password)
 }
 
-func LoginUser() {}
+func LoginUser() {
+	scanner := bufio.NewScanner(os.Stdin)
+	var id, email, password string
+
+	print("\nPlease Enter Your Email: ")
+	scanner.Scan()
+	email = scanner.Text()
+
+	id = email
+
+	print("\nPlease Enter Your password: ")
+	scanner.Scan()
+	password = scanner.Text()
+
+	fmt.Printf("\nUser Created Successfuly: %s | %s | %s", id, email, password)
+}
