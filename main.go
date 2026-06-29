@@ -44,4 +44,19 @@ func main() {
 
 		fmt.Printf("\nCategory Created Successfuly: %s | %s", title, color)
 	}
+	if *command == "register" {
+		var id, email, password string
+
+		print("\nPlease Enter Your Email: ")
+		scanner.Scan()
+		email = scanner.Text()
+
+		id = email
+
+		print("\nPlease Enter Your password: ")
+		scanner.Scan()
+		password = scanner.Text()
+
+		fmt.Printf("\nUser Created Successfuly: %s | %s | %s", id, email, password)
+	}
 }
