@@ -7,13 +7,30 @@ import (
 	"os"
 )
 
+type User struct {
+	ID int
+	Email string
+	Password string
+}
+
+var userStorage []User
+
 func main() {
 	fmt.Println("\n***** Welcome to TODO app *****")
 
 	command := flag.String("command", "No command", "Command to run")
 	flag.Parse()
 
-	RunCommand(*command)
+	for {
+		RunCommand(*command)
+
+		scanner := bufio.NewScanner(os.Stdin)
+		fmt.Print("\nPlease Enter Another Command: ")
+		scanner.Scan()
+		*command = scanner.Text()
+	}
+
+	fmt.Printf("Users: %+v", userStorage)
 } 
 
 func RunCommand(command string) {
@@ -26,6 +43,8 @@ func RunCommand(command string) {
 		RegisterUser()
 	case "login":
 		LoginUser()
+	case "exit":
+		os.Exit(0)
 	default:
 		fmt.Println("Command Is Not Valid.")
 	}
@@ -67,19 +86,25 @@ func CreateCategory() {
 
 func RegisterUser() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var id, email, password string
+	var email, password string
 
 	print("\nPlease Enter Your Email: ")
 	scanner.Scan()
 	email = scanner.Text()
 
-	id = email
-
 	print("\nPlease Enter Your password: ")
 	scanner.Scan()
 	password = scanner.Text()
 
-	fmt.Printf("\nUser Created Successfuly: %s | %s | %s", id, email, password)
+	user := User {
+		ID: len(userStorage) + 1,
+		Email: email,
+		Password: password,
+	}
+
+	userStorage = append(userStorage, user)
+
+	fmt.Print("\nUser Created Successfuly")
 }
 
 func LoginUser() {
