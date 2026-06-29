@@ -29,6 +29,19 @@ func main() {
 		scanner.Scan()
 		duedate = scanner.Text()
 
-		fmt.Printf("\nTask Create Successfuly: %s: %s On %s", category, task, duedate)
+		fmt.Printf("\nTask Created Successfuly: %s: %s On %s", category, task, duedate)
+	}
+	if *command == "create-category" {
+		var title, color string
+
+		print("\nPlease Enter Category Title: ")
+		scanner.Scan()
+		title = scanner.Text()
+
+		print("\nPlease Enter Category Color: ")
+		scanner.Scan()
+		color = scanner.Text()
+
+		fmt.Printf("\nCategory Created Successfuly: %s | %s", title, color)
 	}
 }
