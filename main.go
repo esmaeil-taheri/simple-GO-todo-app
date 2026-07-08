@@ -14,7 +14,18 @@ type User struct {
 	Password string
 }
 
+type Task struct {
+	ID int
+	Title string
+	DueDate string
+	Category string
+	IsDone bool
+	UserID int
+
+}
+
 var userStorage []User
+var taskList []Task
 var AuthenticatedUser *User
 
 func main() {
@@ -51,6 +62,8 @@ func RunCommand(command string) {
 		CreateCategory()
 	case "register":
 		RegisterUser()
+	case "list-task":
+		ListTask()
 	case "login":
 		if AuthenticatedUser != nil {
 			return
@@ -65,11 +78,11 @@ func RunCommand(command string) {
 
 func CreateTask() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var task, category, duedate string
+	var title, category, duedate string
 
 	print("\nPlease Enter Task: ")
 	scanner.Scan()
-	task = scanner.Text()
+	title = scanner.Text()
 
 	print("\nPlease Enter Category: ")
 	scanner.Scan()
@@ -79,7 +92,18 @@ func CreateTask() {
 	scanner.Scan()
 	duedate = scanner.Text()
 
-	fmt.Printf("\nTask Created Successfuly: %s: %s On %s", category, task, duedate)
+	task := Task {
+		ID: len(taskList) + 1,
+		Title: title,
+		DueDate: duedate,
+		Category: category,
+		IsDone: false,
+		UserID: AuthenticatedUser.ID,
+	}
+
+	taskList = append(taskList, task)
+
+	fmt.Printf("\nTask Created Successfuly: %s | %s On %s", category, title, duedate)
 }
 
 func CreateCategory() {
@@ -148,5 +172,14 @@ func LoginUser() {
 
 	if AuthenticatedUser == nil {
 		fmt.Println("The Email Or Password Is Not Currect")
+	}
+}
+
+
+func ListTask() {
+	for _, task := range taskList {
+		if task.UserID == AuthenticatedUser.ID {
+			fmt.Printf("%+v\n", task)
+		}
 	}
 }
