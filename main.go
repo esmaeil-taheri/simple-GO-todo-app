@@ -9,6 +9,7 @@ import (
 
 type User struct {
 	ID int
+	Name string
 	Email string
 	Password string
 }
@@ -30,7 +31,6 @@ func main() {
 		*command = scanner.Text()
 	}
 
-	fmt.Printf("Users: %+v", userStorage)
 } 
 
 func RunCommand(command string) {
@@ -86,11 +86,15 @@ func CreateCategory() {
 
 func RegisterUser() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var email, password string
+	var name, email, password string
 
 	print("\nPlease Enter Your Email: ")
 	scanner.Scan()
 	email = scanner.Text()
+
+	print("\nPlease Enter Your Name: ")
+	scanner.Scan()
+	name = scanner.Text()
 
 	print("\nPlease Enter Your password: ")
 	scanner.Scan()
@@ -98,6 +102,7 @@ func RegisterUser() {
 
 	user := User {
 		ID: len(userStorage) + 1,
+		Name: name,
 		Email: email,
 		Password: password,
 	}
