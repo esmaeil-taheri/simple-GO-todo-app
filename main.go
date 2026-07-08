@@ -15,6 +15,7 @@ type User struct {
 }
 
 var userStorage []User
+var AuthenticatedUser *User
 
 func main() {
 	fmt.Println("\n***** Welcome to TODO app *****")
@@ -34,6 +35,15 @@ func main() {
 } 
 
 func RunCommand(command string) {
+
+	if command != "register" && command != "exit" && AuthenticatedUser == nil {
+		LoginUser()
+
+		if AuthenticatedUser == nil {
+			return
+		}
+	}
+
 	switch command {
 	case "create-task":
 		CreateTask()
@@ -42,6 +52,9 @@ func RunCommand(command string) {
 	case "register":
 		RegisterUser()
 	case "login":
+		if AuthenticatedUser != nil {
+			return
+		}
 		LoginUser()
 	case "exit":
 		os.Exit(0)
@@ -114,17 +127,26 @@ func RegisterUser() {
 
 func LoginUser() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var id, email, password string
+	var email, password string
 
 	print("\nPlease Enter Your Email: ")
 	scanner.Scan()
 	email = scanner.Text()
 
-	id = email
-
 	print("\nPlease Enter Your password: ")
 	scanner.Scan()
 	password = scanner.Text()
+	// get the email and password from the client
 
-	fmt.Printf("\nUser Created Successfuly: %s | %s | %s", id, email, password)
+	for _, user := range userStorage {
+		if user.Email == email && user.Password == password {
+			AuthenticatedUser = &user
+
+			break
+		}
+	}
+
+	if AuthenticatedUser == nil {
+		fmt.Println("The Email Or Password Is Not Currect")
+	}
 }
