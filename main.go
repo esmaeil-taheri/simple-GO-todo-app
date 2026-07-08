@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type User struct {
@@ -18,14 +19,22 @@ type Task struct {
 	ID int
 	Title string
 	DueDate string
-	Category string
+	CategoryID int
 	IsDone bool
 	UserID int
 
 }
 
+type Category struct {
+	ID int
+	Title string
+	Color string
+	UserID int
+}
+
 var userStorage []User
 var taskList []Task
+var categoryList []Category
 var AuthenticatedUser *User
 
 func main() {
@@ -88,6 +97,28 @@ func CreateTask() {
 	scanner.Scan()
 	category = scanner.Text()
 
+	CategoryID, err := strconv.Atoi(category)
+	if err != nil {
+		fmt.Printf("Category input is not valid, %v\n", err)
+
+		return
+	}
+
+	isFound := false
+	for _, c := range categoryList {
+		if c.ID == CategoryID && c.UserID == AuthenticatedUser.ID {
+			isFound = true
+
+			break
+		}
+	}
+
+	if !isFound {
+		fmt.Println("Category not found.")
+
+		return
+	}
+
 	print("\nPlease Enter DueDate: ")
 	scanner.Scan()
 	duedate = scanner.Text()
@@ -96,7 +127,7 @@ func CreateTask() {
 		ID: len(taskList) + 1,
 		Title: title,
 		DueDate: duedate,
-		Category: category,
+		CategoryID: CategoryID,
 		IsDone: false,
 		UserID: AuthenticatedUser.ID,
 	}
@@ -117,6 +148,15 @@ func CreateCategory() {
 	print("\nPlease Enter Category Color: ")
 	scanner.Scan()
 	color = scanner.Text()
+
+	c := Category{
+		ID: len(categoryList) + 1,
+		Title: title,
+		Color: color,
+		UserID: AuthenticatedUser.ID,
+	}
+
+	categoryList = append(categoryList, c)
 
 	fmt.Printf("\nCategory Created Successfuly: %s | %s", title, color)
 }
