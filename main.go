@@ -200,6 +200,7 @@ func RegisterUser() {
 
 		return
 	}
+	defer file.Close()
 
 	data := fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", 
 	user.ID, user.Name, user.Email, user.Password)
@@ -207,8 +208,6 @@ func RegisterUser() {
 	var b = []byte(data)
 
 	file.Write(b)
-
-	file.Close()
 
 	fmt.Print("\nUser Created Successfuly")
 }
