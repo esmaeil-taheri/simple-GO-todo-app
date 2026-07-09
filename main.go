@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -33,21 +35,37 @@ type Category struct {
 	UserID int
 }
 
-var userStorage []User
-var taskList []Task
-var categoryList []Category
-var AuthenticatedUser *User
+var (
+	userStorage []User
+	taskList []Task
+	categoryList []Category
+	AuthenticatedUser *User
+	serializationMode string
+)
 
-const userStoragePath = "user.txt"
+const (
+	textMode = "txt"
+	jsonMode = "json"
+	userStoragePath = "user.txt"
+)
 
 func main() {
 
-	loadUserStorageFromFile()
-
+	
 	fmt.Println("\n***** Welcome to TODO app *****")
 
+	serializeMode := flag.String("serialize-mode", textMode, "serialization mode to write user in file")
 	command := flag.String("command", "No command", "Command to run")
 	flag.Parse()
+	
+	loadUserStorageFromFile(*serializeMode)
+
+	switch *serializeMode {
+	case textMode:
+		serializationMode = textMode
+	default:
+		serializationMode = jsonMode
+	}
 
 	for {
 		RunCommand(*command)
@@ -228,7 +246,7 @@ func ListTask() {
 	}
 }
 
-func loadUserStorageFromFile() {
+func loadUserStorageFromFile(serializationMode string) {
 	file, err := os.Open(userStoragePath)
 	if err != nil {
 		fmt.Printf("Error occurred while opening uset.txt file. %s\n", err)
@@ -238,42 +256,37 @@ func loadUserStorageFromFile() {
 	_, oErr := file.Read(data)
 	if oErr != nil {
 		fmt.Printf("Error occurred while reading uset.txt file. %s\n", oErr)
+
+		return
 	}
 
 	var dataStr = string(data)
+
 	userSlice := strings.Split(dataStr, "\n")
 	for _, u := range userSlice {
-		if u == "" {
-			continue
-		}
+		var userStruct = User{}
 
-		user := User{}
-		userFields := strings.Split(u, ",")
-		for _, field := range userFields {
-			values := strings.Split(field, ": ")
-			fieldName := strings.ReplaceAll(values[0], " ", "")
-			fieldValue := values[1]
-
-			switch fieldName {
-			case "id":
-				id, err := strconv.Atoi(fieldValue)
-				if err != nil {
-					fmt.Println("Strconv error", err)
-
-					return
-				}
-				user.ID = id
-			case "name":
-				user.Name = fieldValue
-			case "email":
-				user.Email = fieldValue
-			case "password":
-				user.Password = fieldValue
+		switch serializationMode {
+		case textMode:
+			var dErr error
+			userStruct, dErr = deserializeFromText(u)
+			if dErr != nil {
+				fmt.Println("Cannot deserialize user record to user struct in text mode.", dErr)
+				
+				return
+			}
+		case jsonMode:
+			uErr := json.Unmarshal([]byte(u), &userStruct)
+			if uErr != nil {
+				fmt.Println("Cannot deserialize user record to user struct in json mode.", uErr)
+				
+				return
 			}
 		}
-		fmt.Printf("user: %+v\n", user)
+		
+		fmt.Println(userStruct)
+		userStorage = append(userStorage, userStruct)
 	}
-
 }
 
 func writeUserToFile(user User) {
@@ -289,12 +302,65 @@ func writeUserToFile(user User) {
 	}
 	defer file.Close()
 
-	data := fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", 
-	user.ID, user.Name, user.Email, user.Password)
+	var data []byte
+	if serializationMode == textMode {
+		data = []byte(fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", 
+			user.ID, user.Name, user.Email, user.Password))
+	} else if serializationMode == jsonMode {
+		var jErr error
+		data, jErr = json.Marshal(user)
+		if jErr != nil {
+			fmt.Println("Error occurred while marshaling user to json.", jErr)
 
-	var b = []byte(data)
+			return
+		}
+	} else {
+		fmt.Println("Invalid serialization mode.")
 
-	file.Write(b)
+		return
+	}
+
+	data = append(data, []byte("\n")...)
+
+	file.Write(data)
 
 	fmt.Print("\nUser Created Successfuly")
+}
+
+
+func deserializeFromText(userStr string) (User, error) {
+	if userStr == "" {
+
+			return User{}, errors.New("user string is empty.")
+		}
+
+		var user = User{}
+		userFields := strings.Split(userStr, ",")
+		for _, field := range userFields {
+			values := strings.Split(field, ": ")
+			if len(values) != 2{
+				fmt.Println("field is not valid, skipping...", len(values))
+
+				continue
+			}
+			fieldName := strings.ReplaceAll(values[0], " ", "")
+			fieldValue := values[1]
+
+			switch fieldName {
+			case "id":
+				id, err := strconv.Atoi(fieldValue)
+				if err != nil {
+					return User{}, errors.New("Str conv error.")
+				}
+				user.ID = id
+			case "name":
+				user.Name = fieldValue
+			case "email":
+				user.Email = fieldValue
+			case "password":
+				user.Password = fieldValue
+			}
+		}
+
+		return user, nil
 }
