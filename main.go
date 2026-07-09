@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type User struct {
@@ -37,7 +38,12 @@ var taskList []Task
 var categoryList []Category
 var AuthenticatedUser *User
 
+const userStoragePath = "user.txt"
+
 func main() {
+
+	loadUserStorageFromFile()
+
 	fmt.Println("\n***** Welcome to TODO app *****")
 
 	command := flag.String("command", "No command", "Command to run")
@@ -186,10 +192,9 @@ func RegisterUser() {
 
 	userStorage = append(userStorage, user)
 
-	path := "user.txt"
 	var file *os.File
 
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(userStoragePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Error while creationg or opening the user.txt file. %s", err)
 
@@ -241,4 +246,52 @@ func ListTask() {
 			fmt.Printf("%+v\n", task)
 		}
 	}
+}
+
+func loadUserStorageFromFile() {
+	file, err := os.Open(userStoragePath)
+	if err != nil {
+		fmt.Printf("Error occurred while opening uset.txt file. %s\n", err)
+	}
+
+	var data = make([]byte, 10240)
+	_, oErr := file.Read(data)
+	if oErr != nil {
+		fmt.Printf("Error occurred while reading uset.txt file. %s\n", oErr)
+	}
+
+	var dataStr = string(data)
+	userSlice := strings.Split(dataStr, "\n")
+	for _, u := range userSlice {
+		if u == "" {
+			continue
+		}
+
+		user := User{}
+		userFields := strings.Split(u, ",")
+		for _, field := range userFields {
+			values := strings.Split(field, ": ")
+			fieldName := strings.ReplaceAll(values[0], " ", "")
+			fieldValue := values[1]
+
+			switch fieldName {
+			case "id":
+				id, err := strconv.Atoi(fieldValue)
+				if err != nil {
+					fmt.Println("Strconv error", err)
+
+					return
+				}
+				user.ID = id
+			case "name":
+				user.Name = fieldValue
+			case "email":
+				user.Email = fieldValue
+			case "password":
+				user.Password = fieldValue
+			}
+		}
+		fmt.Printf("user: %+v\n", user)
+	}
+
 }
