@@ -190,26 +190,7 @@ func RegisterUser() {
 		Password: password,
 	}
 
-	userStorage = append(userStorage, user)
-
-	var file *os.File
-
-	file, err := os.OpenFile(userStoragePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Printf("Error while creationg or opening the user.txt file. %s", err)
-
-		return
-	}
-	defer file.Close()
-
-	data := fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", 
-	user.ID, user.Name, user.Email, user.Password)
-
-	var b = []byte(data)
-
-	file.Write(b)
-
-	fmt.Print("\nUser Created Successfuly")
+	writeUserToFile(user)
 }
 
 func LoginUser() {
@@ -293,4 +274,27 @@ func loadUserStorageFromFile() {
 		fmt.Printf("user: %+v\n", user)
 	}
 
+}
+
+func writeUserToFile(user User) {
+	userStorage = append(userStorage, user)
+
+	var file *os.File
+
+	file, err := os.OpenFile(userStoragePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Printf("Error while creationg or opening the user.txt file. %s", err)
+
+		return
+	}
+	defer file.Close()
+
+	data := fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", 
+	user.ID, user.Name, user.Email, user.Password)
+
+	var b = []byte(data)
+
+	file.Write(b)
+
+	fmt.Print("\nUser Created Successfuly")
 }
