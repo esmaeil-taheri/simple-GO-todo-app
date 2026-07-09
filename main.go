@@ -186,6 +186,25 @@ func RegisterUser() {
 
 	userStorage = append(userStorage, user)
 
+	path := "user.txt"
+	var file *os.File
+
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Printf("Error while creationg or opening the user.txt file. %s", err)
+
+		return
+	}
+
+	data := fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", 
+	user.ID, user.Name, user.Email, user.Password)
+
+	var b = []byte(data)
+
+	file.Write(b)
+
+	file.Close()
+
 	fmt.Print("\nUser Created Successfuly")
 }
 
