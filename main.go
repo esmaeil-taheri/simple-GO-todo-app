@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -201,11 +202,16 @@ func RegisterUser() {
 	scanner.Scan()
 	password = scanner.Text()
 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Println("Password hashing failed.", hashedPassword)
+	}
+
 	user := User {
 		ID: len(userStorage) + 1,
 		Name: name,
 		Email: email,
-		Password: password,
+		Password: string(hashedPassword),
 	}
 
 	writeUserToFile(user)
@@ -225,7 +231,9 @@ func LoginUser() {
 	// get the email and password from the client
 
 	for _, user := range userStorage {
-		if user.Email == email && user.Password == password {
+		err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+		if user.Email == email && err == nil {
+			fmt.Println("User loged in.")
 			AuthenticatedUser = &user
 
 			break
@@ -234,6 +242,8 @@ func LoginUser() {
 
 	if AuthenticatedUser == nil {
 		fmt.Println("The Email Or Password Is Not Currect")
+
+		return
 	}
 }
 
