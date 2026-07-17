@@ -2,22 +2,18 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
+	"todoapp/contract"
+	"todoapp/entity"
+	"todoapp/filestore"
+	"todoapp/constant"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct {
-	ID int
-	Name string
-	Email string
-	Password string
-}
 
 type Task struct {
 	ID int
@@ -37,29 +33,24 @@ type Category struct {
 }
 
 var (
-	userStorage []User
+	userStorage []entity.User
 	taskList []Task
 	categoryList []Category
-	AuthenticatedUser *User
+	AuthenticatedUser *entity.User
 	serializationMode string
 )
 
 const (
-	textMode = "txt"
-	jsonMode = "json"
 	userStoragePath = "user.txt"
 )
 
-var userFileStore = fileStore{
-	filePath: userStoragePath,
-}
 
 func main() {
 
 	
 	fmt.Println("\n***** Welcome to TODO app *****")
 
-	serializeMode := flag.String("serialize-mode", textMode, "serialization mode to write user in file")
+	serializeMode := flag.String("serialize-mode", constant.TextMode, "serialization mode to write user in file")
 	command := flag.String("command", "No command", "Command to run")
 	flag.Parse()
 	
@@ -73,17 +64,20 @@ func main() {
 
 	// userReadFileStore = userReadStore
 
-	LoadUserFromStorage(userFileStore, *serializeMode)
-
 	switch *serializeMode {
-	case textMode:
-		serializationMode = textMode
+	case constant.TextMode:
+		serializationMode = constant.TextMode
 	default:
-		serializationMode = jsonMode
+		serializationMode = constant.JsonMode
 	}
 
+	var userFileStore = filestore.New(userStoragePath, serializationMode)
+
+	users := userFileStore.Load()
+	userStorage = append(userStorage, users...)
+
 	for {
-		RunCommand(*command)
+		RunCommand(userFileStore, *command)
 
 		scanner := bufio.NewScanner(os.Stdin)
 		fmt.Print("\nPlease Enter Another Command: ")
@@ -93,7 +87,7 @@ func main() {
 
 } 
 
-func RunCommand(command string) {
+func RunCommand(store contract.UserWriteStore, command string) {
 
 	if command != "register" && command != "exit" && AuthenticatedUser == nil {
 		LoginUser()
@@ -109,7 +103,7 @@ func RunCommand(command string) {
 	case "create-category":
 		CreateCategory()
 	case "register":
-		RegisterUser(userFileStore)
+		RegisterUser(store)
 	case "list-task":
 		ListTask()
 	case "login":
@@ -200,15 +194,7 @@ func CreateCategory() {
 	fmt.Printf("\nCategory Created Successfuly: %s | %s", title, color)
 }
 
-type userWriteStore interface {
-	Save(u User)
-}
-
-type userReadStore interface {
-	Load(serializationMode string) []User
-}
-
-func RegisterUser(store userWriteStore) {
+func RegisterUser(store contract.UserWriteStore) {
 	scanner := bufio.NewScanner(os.Stdin)
 	var name, email, password string
 
@@ -229,7 +215,7 @@ func RegisterUser(store userWriteStore) {
 		fmt.Println("Password hashing failed.", hashedPassword)
 	}
 
-	user := User {
+	user := entity.User {
 		ID: len(userStorage) + 1,
 		Name: name,
 		Email: email,
@@ -272,153 +258,10 @@ func LoginUser() {
 	}
 }
 
-
 func ListTask() {
 	for _, task := range taskList {
 		if task.UserID == AuthenticatedUser.ID {
 			fmt.Printf("%+v\n", task)
 		}
 	}
-}
-
-
-func LoadUserFromStorage(store userReadStore, serializationMode string) {
-	users := store.Load(serializationMode)
-
-	userStorage = append(userStorage, users...)
-}
-
-func (f fileStore) writeUserToFile(user User) {
-	userStorage = append(userStorage, user)
-
-	var file *os.File
-
-	file, err := os.OpenFile(f.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Printf("Error while creationg or opening the user.txt file. %s", err)
-
-		return
-	}
-	defer file.Close()
-
-	var data []byte
-	if serializationMode == textMode {
-		data = []byte(fmt.Sprintf("id: %d, name: %s, email: %s, password: %s\n", 
-			user.ID, user.Name, user.Email, user.Password))
-	} else if serializationMode == jsonMode {
-		var jErr error
-		data, jErr = json.Marshal(user)
-		if jErr != nil {
-			fmt.Println("Error occurred while marshaling user to json.", jErr)
-
-			return
-		}
-	} else {
-		fmt.Println("Invalid serialization mode.")
-
-		return
-	}
-
-	data = append(data, []byte("\n")...)
-
-	file.Write(data)
-
-	fmt.Print("\nUser Created Successfuly")
-}
-
-
-func deserializeFromText(userStr string) (User, error) {
-	if userStr == "" {
-
-			return User{}, errors.New("user string is empty.")
-		}
-
-		var user = User{}
-		userFields := strings.Split(userStr, ",")
-		for _, field := range userFields {
-			values := strings.Split(field, ": ")
-			if len(values) != 2{
-				fmt.Println("field is not valid, skipping...", len(values))
-
-				continue
-			}
-			fieldName := strings.ReplaceAll(values[0], " ", "")
-			fieldValue := values[1]
-
-			switch fieldName {
-			case "id":
-				id, err := strconv.Atoi(fieldValue)
-				if err != nil {
-					return User{}, errors.New("Str conv error.")
-				}
-				user.ID = id
-			case "name":
-				user.Name = fieldValue
-			case "email":
-				user.Email = fieldValue
-			case "password":
-				user.Password = fieldValue
-			}
-		}
-
-		return user, nil
-}
-
-type fileStore struct {
-	filePath string
-}
-
-
-func (f fileStore) Save(u User) {
-	f.writeUserToFile(u)
-}
-
-func (f fileStore) Load(serializationMode string) []User {
-	var uStore []User
-
-	file, err := os.Open(f.filePath)
-	if err != nil {
-		fmt.Printf("Error occurred while opening uset.txt file. %s\n", err)
-	}
-
-	var data = make([]byte, 10240)
-	_, oErr := file.Read(data)
-	if oErr != nil {
-		fmt.Printf("Error occurred while reading uset.txt file. %s\n", oErr)
-
-		return nil
-	}
-
-	var dataStr = string(data)
-
-	userSlice := strings.Split(dataStr, "\n")
-	for _, u := range userSlice {
-		var userStruct = User{}
-
-		switch serializationMode {
-		case textMode:
-			var dErr error
-			userStruct, dErr = deserializeFromText(u)
-			if dErr != nil {
-				fmt.Println("Cannot deserialize user record to user struct in text mode.", dErr)
-				
-				return nil
-			}
-		case jsonMode:
-			uErr := json.Unmarshal([]byte(u), &userStruct)
-			if uErr != nil {
-				fmt.Println("Cannot deserialize user record to user struct in json mode.", uErr)
-				
-				return nil
-			}
-		default:
-			fmt.Println("invalid serialization mode")
-
-			return nil
-		}
-		
-		uStore = append(uStore, userStruct)
-	}
-
-	return uStore
 }
