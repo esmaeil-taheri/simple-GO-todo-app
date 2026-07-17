@@ -59,7 +59,17 @@ func main() {
 	command := flag.String("command", "No command", "Command to run")
 	flag.Parse()
 	
-	loadUserStorageFromFile(*serializeMode)
+	// loadUserStorageFromFile(*serializeMode)
+
+	var userReadFileStore userReadStore
+
+	var userReadStore = fileStore{
+		filePath: "/store/data.txt",
+	}
+
+	userReadFileStore = userReadStore
+
+	LoadUserFromStorage(userReadFileStore, *serializeMode)
 
 	switch *serializeMode {
 	case textMode:
@@ -89,13 +99,21 @@ func RunCommand(command string) {
 		}
 	}
 
+	var store userWriteStore
+
+	var userFileStore = fileStore{
+		filePath: "/store/user.txt",
+	}
+
+	store = userFileStore
+
 	switch command {
 	case "create-task":
 		CreateTask()
 	case "create-category":
 		CreateCategory()
 	case "register":
-		RegisterUser()
+		RegisterUser(store)
 	case "list-task":
 		ListTask()
 	case "login":
@@ -186,7 +204,15 @@ func CreateCategory() {
 	fmt.Printf("\nCategory Created Successfuly: %s | %s", title, color)
 }
 
-func RegisterUser() {
+type userWriteStore interface {
+	Save(u User)
+}
+
+type userReadStore interface {
+	Load(serializationMode string) []User
+}
+
+func RegisterUser(store userWriteStore) {
 	scanner := bufio.NewScanner(os.Stdin)
 	var name, email, password string
 
@@ -214,7 +240,10 @@ func RegisterUser() {
 		Password: string(hashedPassword),
 	}
 
-	writeUserToFile(user)
+	userStorage = append(userStorage, user)
+
+	// writeUserToFile(user)
+	store.Save(user)
 }
 
 func LoginUser() {
@@ -256,47 +285,11 @@ func ListTask() {
 	}
 }
 
-func loadUserStorageFromFile(serializationMode string) {
-	file, err := os.Open(userStoragePath)
-	if err != nil {
-		fmt.Printf("Error occurred while opening uset.txt file. %s\n", err)
-	}
 
-	var data = make([]byte, 10240)
-	_, oErr := file.Read(data)
-	if oErr != nil {
-		fmt.Printf("Error occurred while reading uset.txt file. %s\n", oErr)
+func LoadUserFromStorage(store userReadStore, serializationMode string) {
+	users := store.Load(serializationMode)
 
-		return
-	}
-
-	var dataStr = string(data)
-
-	userSlice := strings.Split(dataStr, "\n")
-	for _, u := range userSlice {
-		var userStruct = User{}
-
-		switch serializationMode {
-		case textMode:
-			var dErr error
-			userStruct, dErr = deserializeFromText(u)
-			if dErr != nil {
-				fmt.Println("Cannot deserialize user record to user struct in text mode.", dErr)
-				
-				return
-			}
-		case jsonMode:
-			uErr := json.Unmarshal([]byte(u), &userStruct)
-			if uErr != nil {
-				fmt.Println("Cannot deserialize user record to user struct in json mode.", uErr)
-				
-				return
-			}
-		}
-		
-		fmt.Println(userStruct)
-		userStorage = append(userStorage, userStruct)
-	}
+	userStorage = append(userStorage, users...)
 }
 
 func writeUserToFile(user User) {
@@ -373,4 +366,63 @@ func deserializeFromText(userStr string) (User, error) {
 		}
 
 		return user, nil
+}
+
+type fileStore struct {
+	filePath string
+}
+
+
+func (f fileStore) Save(u User) {
+	writeUserToFile(u)
+}
+
+func (f fileStore) Load(serializationMode string) []User {
+	var uStore []User
+
+	file, err := os.Open(userStoragePath)
+	if err != nil {
+		fmt.Printf("Error occurred while opening uset.txt file. %s\n", err)
+	}
+
+	var data = make([]byte, 10240)
+	_, oErr := file.Read(data)
+	if oErr != nil {
+		fmt.Printf("Error occurred while reading uset.txt file. %s\n", oErr)
+
+		return nil
+	}
+
+	var dataStr = string(data)
+
+	userSlice := strings.Split(dataStr, "\n")
+	for _, u := range userSlice {
+		var userStruct = User{}
+
+		switch serializationMode {
+		case textMode:
+			var dErr error
+			userStruct, dErr = deserializeFromText(u)
+			if dErr != nil {
+				fmt.Println("Cannot deserialize user record to user struct in text mode.", dErr)
+				
+				return nil
+			}
+		case jsonMode:
+			uErr := json.Unmarshal([]byte(u), &userStruct)
+			if uErr != nil {
+				fmt.Println("Cannot deserialize user record to user struct in json mode.", uErr)
+				
+				return nil
+			}
+		default:
+			fmt.Println("invalid serialization mode")
+
+			return nil
+		}
+		
+		uStore = append(uStore, userStruct)
+	}
+
+	return uStore
 }
