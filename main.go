@@ -50,6 +50,10 @@ const (
 	userStoragePath = "user.txt"
 )
 
+var userFileStore = fileStore{
+	filePath: userStoragePath,
+}
+
 func main() {
 
 	
@@ -61,15 +65,15 @@ func main() {
 	
 	// loadUserStorageFromFile(*serializeMode)
 
-	var userReadFileStore userReadStore
+	// var userReadFileStore userReadStore
 
-	var userReadStore = fileStore{
-		filePath: "/store/data.txt",
-	}
+	// var userReadStore = fileStore{
+	// 	filePath: "/store/data.txt",
+	// }
 
-	userReadFileStore = userReadStore
+	// userReadFileStore = userReadStore
 
-	LoadUserFromStorage(userReadFileStore, *serializeMode)
+	LoadUserFromStorage(userFileStore, *serializeMode)
 
 	switch *serializeMode {
 	case textMode:
@@ -99,21 +103,13 @@ func RunCommand(command string) {
 		}
 	}
 
-	var store userWriteStore
-
-	var userFileStore = fileStore{
-		filePath: "/store/user.txt",
-	}
-
-	store = userFileStore
-
 	switch command {
 	case "create-task":
 		CreateTask()
 	case "create-category":
 		CreateCategory()
 	case "register":
-		RegisterUser(store)
+		RegisterUser(userFileStore)
 	case "list-task":
 		ListTask()
 	case "login":
@@ -292,12 +288,12 @@ func LoadUserFromStorage(store userReadStore, serializationMode string) {
 	userStorage = append(userStorage, users...)
 }
 
-func writeUserToFile(user User) {
+func (f fileStore) writeUserToFile(user User) {
 	userStorage = append(userStorage, user)
 
 	var file *os.File
 
-	file, err := os.OpenFile(userStoragePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(f.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Error while creationg or opening the user.txt file. %s", err)
 
@@ -374,13 +370,13 @@ type fileStore struct {
 
 
 func (f fileStore) Save(u User) {
-	writeUserToFile(u)
+	f.writeUserToFile(u)
 }
 
 func (f fileStore) Load(serializationMode string) []User {
 	var uStore []User
 
-	file, err := os.Open(userStoragePath)
+	file, err := os.Open(f.filePath)
 	if err != nil {
 		fmt.Printf("Error occurred while opening uset.txt file. %s\n", err)
 	}
